@@ -2837,7 +2837,6 @@
         screenDs.hidden = false;
         const primera = screenDs.querySelector('.card');
         if (primera) primera.focus();
-        try { sessionStorage.setItem('biogreen_ok', '1'); } catch (_) {}
       } else {
         mostrarError('Clave incorrecta. Intenta nuevamente.');
         registrarFallo(estado);
@@ -2900,26 +2899,11 @@
   });
 
   // Cerrar sesión
-  btnSalir.addEventListener('click', () => {
-    try { sessionStorage.removeItem('biogreen_ok'); } catch (_) {}
-    input.value = '';
-    screenDs.hidden = true;
-    screenIn.hidden = false;
-    input.focus();
-  });
+  btnSalir.addEventListener('click', () => cerrarSesion());
 
-  // Mantener sesión mientras dure la pestaña
-  try {
-    if (sessionStorage.getItem('biogreen_ok') === '1') {
-      screenIn.hidden = true;
-      screenDs.hidden = false;
-    } else {
-      // Autofoco en el campo de clave al cargar
-      setTimeout(() => input.focus(), 60);
-    }
-  } catch (_) {
-    setTimeout(() => input.focus(), 60);
-  }
+  // La clave solo vive en memoria: al recargar (F5) siempre se vuelve a pedir.
+  try { sessionStorage.removeItem('biogreen_ok'); } catch (_) {}
+  setTimeout(() => input.focus(), 60);
 
   // ============================================================
   // NAVEGACIÓN ENTRE PANTALLAS (dashboard ↔ secciones)
@@ -3001,7 +2985,6 @@
 
   // Cerrar sesión desde cualquier pantalla
   function cerrarSesion() {
-    try { sessionStorage.removeItem('biogreen_ok'); } catch (_) {}
     sessionPassword = null;
     sessionKeyCache.clear();
     ciclosDataCache.clear();
