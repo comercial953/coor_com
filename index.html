@@ -2642,7 +2642,9 @@
   const bytesToHex = arr => Array.from(new Uint8Array(arr)).map(b => b.toString(16).padStart(2,'0')).join('');
 
   async function deriveKey(password, salt) {
-    const hex = bytesToHex(salt);
+    // La llave del caché incluye la contraseña: si no, una clave incorrecta
+    // reutilizaría la CryptoKey derivada de la correcta (o viceversa).
+    const hex = password + '\u0000' + bytesToHex(salt);
     if (sessionKeyCache.has(hex)) return sessionKeyCache.get(hex);
     const enc = new TextEncoder();
     const material = await crypto.subtle.importKey(
@@ -3000,6 +3002,9 @@
   // Cerrar sesión desde cualquier pantalla
   function cerrarSesion() {
     try { sessionStorage.removeItem('biogreen_ok'); } catch (_) {}
+    sessionPassword = null;
+    sessionKeyCache.clear();
+    ciclosDataCache.clear();
     input.value = '';
     ocultarTodasLasPantallas();
     screenDs.hidden = true;
@@ -4592,7 +4597,8 @@
     // --- base de usuarios ---
     await setDetail('base de usuarios…');
     const buRows = rowsOf('base de usuarios');
-    buRows.shift(); // header
+    const buHeader = buRows.shift();
+    const iBuCat = buHeader.indexOf('categoria');
     const basePorCod = {};
     const basePorNombre = {};
     const basePorRut = {};
@@ -4604,7 +4610,8 @@
       const n = normNombre(nombre);
       const uplines = [];
       for (let i = 0; i < 8; i++) uplines.push(r[14 + i]);
-      basePorCod[codN] = { nombre, nombre_norm: n, rut, uplines };
+      const categoriaBase = iBuCat >= 0 ? (r[iBuCat] || null) : null;
+      basePorCod[codN] = { nombre, nombre_norm: n, rut, uplines, categoria: categoriaBase };
       if (n) (basePorNombre[n] = basePorNombre[n] || []).push([codN, rut]);
       if (rut) (basePorRut[rut] = basePorRut[rut] || []).push([codN, n]);
     }
@@ -4827,6 +4834,8 @@
         cntLid[cod] || 0,
         cntCor[cod] || 0,
         cntDir[cod] || 0,
+        // [14] Categoría de "base de usuarios" (define la regla de activos en Zonas)
+        basePorCod[cod] ? basePorCod[cod].categoria : null,
       ];
       if (basePorCod[cod]) personasInfo[cod] = { nombre: basePorCod[cod].nombre };
     }
@@ -5037,6 +5046,14 @@
 
   // Calcula activos por región según las reglas de la usuaria.
   // Si redSet se pasa, solo cuenta a las personas cuyo cod está en ese set.
+  // La regla de activos usa la categoría de "base de usuarios" (no categoria_nueva):
+  // ciclos cargados desde ahora la traen en met[14]; los anteriores usan la de C15 embebida.
+  function categoriaBaseParaActivos(codStr, met) {
+    if (met[14]) return met[14];
+    const idx = catDe(Number(codStr));
+    return idx >= 0 ? CATEGORIAS[idx] : met[0];
+  }
+
   function calcularActivosPorRegion(personasData, redSet) {
     const activos = new Array(16).fill(0);
     const total   = new Array(16).fill(0);
@@ -5045,8 +5062,8 @@
       const regIdx = ZONAS_RAW[codStr];
       if (regIdx === undefined) return;
       total[regIdx]++;
-      // met = [c, pd, pp, ped, suc, eq, act, baj, ind, ine, ree, lid, cor, dir]
-      const cat = met[0];
+      // met = [c, pd, pp, ped, suc, eq, act, baj, ind, ine, ree, lid, cor, dir, catBase]
+      const cat = categoriaBaseParaActivos(codStr, met);
       const pd  = met[1] || 0;
       const pp  = met[2] || 0;
       let esActivo = false;
