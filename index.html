@@ -2684,6 +2684,11 @@
             <div>Ciclo procesado. Se descargaron <strong>2 archivos</strong> a tu carpeta de <em>Descargas</em>.</div>
             <small id="cargar-done-detail" style="color:var(--tinta-suave);"></small>
           </div>
+          <div class="cargar__acciones" style="justify-content:center; flex-wrap:wrap;">
+            <span style="width:100%; text-align:center; font-size:12.5px; color:var(--tinta-suave);">¿No se descargó alguno? Descárgalo aquí:</span>
+            <button type="button" class="btn-mini" id="cargar-dl-ciclo">Datos del ciclo</button>
+            <button type="button" class="btn-mini" id="cargar-dl-index">ciclos_index.json</button>
+          </div>
           <div class="cargar__estado" style="border:1px dashed var(--linea); border-radius:12px; padding:12px 14px; text-align:left; margin-top:12px;">
             <p style="margin:0 0 8px; font-weight:700; color:var(--tinta);">Para publicar el ciclo:</p>
             <ol style="margin:0 0 0 18px; font-size:13px; line-height:1.55; color:var(--tinta);">
@@ -2772,7 +2777,15 @@
 
   // ---------- Helpers criptográficos (Web Crypto API) ----------
   const b64ToBytes = b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-  const bytesToB64 = arr => btoa(String.fromCharCode(...new Uint8Array(arr)));
+  // Por bloques: pasar cientos de KB de una vez a fromCharCode revienta la pila del navegador.
+  const bytesToB64 = arr => {
+    const bytes = new Uint8Array(arr);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  };
   const bytesToHex = arr => Array.from(new Uint8Array(arr)).map(b => b.toString(16).padStart(2,'0')).join('');
 
   async function deriveKey(password, salt) {
@@ -4629,11 +4642,9 @@
       document.getElementById('cargar-done-detail').textContent =
         `Ciclo ${cicloParsed.meta.ciclo_id.replace('__', ' · ')} · ${cicloParsed.meta.totalPersonas} personas`;
       showStepCargar('done');
-      // Refresh cache: limpiar chunks y attribs del ciclo guardado para forzar re-fetch
-      delete chunksCache[cicloParsed.meta.ciclo_id];
-      delete attribsCache[cicloParsed.meta.ciclo_id];
+      // guardarCicloEnDb ya dejó el ciclo nuevo en ciclosMeta y en caché. No se vuelve a leer
+      // el índice publicado: eso borraría los ciclos cargados en esta sesión y aún no subidos.
       delete heatDataCache[cicloParsed.meta.ciclo_id];
-      await cargarMetaCiclos();
       if (!screenRs.hidden) render2().catch(console.error);
       if (!screenZn.hidden) aplicarHeatMap().catch(console.error);
     } catch (e) {
@@ -5030,6 +5041,10 @@
     const bodyIndex = JSON.stringify(nuevoIndex);
 
     // Descargar los 2 archivos al escritorio del admin
+    ultimasDescargas = {
+      ciclo: { nombre: `${m.ciclo_id}.json`, contenido: bodyCiclo },
+      index: { nombre: 'ciclos_index.json', contenido: bodyIndex },
+    };
     setDetail(`descargando ${m.ciclo_id}.json…`);
     setProgress(70);
     descargarComoArchivo(`${m.ciclo_id}.json`, bodyCiclo, 'application/json');
@@ -5048,6 +5063,15 @@
     setProgress(100);
     setDetail('descargas listas — súbelas a GitHub');
   }
+
+  // Archivos del último ciclo procesado, para volver a descargarlos desde los botones
+  let ultimasDescargas = null;
+  ['ciclo', 'index'].forEach(k => {
+    document.getElementById(`cargar-dl-${k}`).addEventListener('click', () => {
+      const d = ultimasDescargas && ultimasDescargas[k];
+      if (d) descargarComoArchivo(d.nombre, d.contenido, 'application/json');
+    });
+  });
 
   // Fuerza al navegador a descargar un archivo con nombre y contenido dado
   function descargarComoArchivo(nombre, contenido, mime = 'application/octet-stream') {
