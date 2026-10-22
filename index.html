@@ -2119,6 +2119,36 @@
   @media (prefers-reduced-motion: reduce) {
     .screen, .card { animation: none !important; transition: none !important; }
   }
+
+  /* ---------- Exportar PDF ---------- */
+  .topbar-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .pdf-pie { display: none; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    html, body { background: #FFFFFF !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+        animation: none !important; transition: none !important; }
+    .screen { opacity: 1 !important; transform: none !important; }
+    /* Controles que no aportan en papel */
+    .seccion__topbar, .buscador__limpiar, .org-controles__btns, #arbol-btn-cambiar,
+    .btn-mini, .btn-primario, .modal, .org-ayuda { display: none !important; }
+    .arbol-resultados, .resultados, .zonas-info, .filtros, .tabla-wrap, .kpi, .mapa-chile {
+      box-shadow: none !important;
+    }
+    /* El contenido ancho se imprime completo (se ajusta con zoom desde JS) */
+    .org, .tabla-wrap { overflow: visible !important; }
+    .org-nodo, .kpi, tr { break-inside: avoid; }
+    .seccion__marca .marca__img { max-height: 54px; width: auto; }
+    .pdf-pie {
+      display: block;
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 1px solid #C9D6CD;
+      font-size: 9.5pt;
+      color: #4E6B5A;
+    }
+  }
 </style>
 </head>
 <body>
@@ -2283,7 +2313,18 @@
           Volver
         </button>
 
-        <button type="button" class="icon-btn" id="btn-salir-2" title="Cerrar sesión">
+        <div class="topbar-acciones">
+
+          <button type="button" class="icon-btn btn-pdf" title="Exportar lo que estás viendo a PDF">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 3 14 8 19 8"/>
+              <path d="M12 12v6M9 15l3 3 3-3"/>
+            </svg>
+            Exportar PDF
+          </button>
+
+          <button type="button" class="icon-btn" id="btn-salir-2" title="Cerrar sesión">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -2291,6 +2332,8 @@
           </svg>
           Salir
         </button>
+
+        </div>
       </div>
 
       <div class="seccion__head">
@@ -2361,7 +2404,18 @@
           Volver
         </button>
 
-        <button type="button" class="icon-btn" id="btn-salir-3" title="Cerrar sesión">
+        <div class="topbar-acciones">
+
+          <button type="button" class="icon-btn btn-pdf" title="Exportar lo que estás viendo a PDF">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 3 14 8 19 8"/>
+              <path d="M12 12v6M9 15l3 3 3-3"/>
+            </svg>
+            Exportar PDF
+          </button>
+
+          <button type="button" class="icon-btn" id="btn-salir-3" title="Cerrar sesión">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -2369,6 +2423,8 @@
           </svg>
           Salir
         </button>
+
+        </div>
       </div>
 
       <div class="seccion__head">
@@ -2445,7 +2501,18 @@
           Volver
         </button>
 
-        <button type="button" class="icon-btn" id="btn-salir-4" title="Cerrar sesión">
+        <div class="topbar-acciones">
+
+          <button type="button" class="icon-btn btn-pdf" title="Exportar lo que estás viendo a PDF">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 3 14 8 19 8"/>
+              <path d="M12 12v6M9 15l3 3 3-3"/>
+            </svg>
+            Exportar PDF
+          </button>
+
+          <button type="button" class="icon-btn" id="btn-salir-4" title="Cerrar sesión">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -2453,6 +2520,8 @@
           </svg>
           Salir
         </button>
+
+        </div>
       </div>
 
       <div class="seccion__head">
@@ -2538,7 +2607,18 @@
           Volver
         </button>
 
-        <button type="button" class="icon-btn" id="btn-salir-5" title="Cerrar sesión">
+        <div class="topbar-acciones">
+
+          <button type="button" class="icon-btn btn-pdf" title="Exportar lo que estás viendo a PDF">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 3 14 8 19 8"/>
+              <path d="M12 12v6M9 15l3 3 3-3"/>
+            </svg>
+            Exportar PDF
+          </button>
+
+          <button type="button" class="icon-btn" id="btn-salir-5" title="Cerrar sesión">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -2546,6 +2626,8 @@
           </svg>
           Salir
         </button>
+
+        </div>
       </div>
 
       <div class="seccion__head">
@@ -2622,7 +2704,18 @@
           Volver
         </button>
 
-        <button type="button" class="icon-btn" id="btn-salir-6" title="Cerrar sesión">
+        <div class="topbar-acciones">
+
+          <button type="button" class="icon-btn btn-pdf" title="Exportar lo que estás viendo a PDF">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 3 14 8 19 8"/>
+              <path d="M12 12v6M9 15l3 3 3-3"/>
+            </svg>
+            Exportar PDF
+          </button>
+
+          <button type="button" class="icon-btn" id="btn-salir-6" title="Cerrar sesión">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -2630,6 +2723,8 @@
           </svg>
           Salir
         </button>
+
+        </div>
       </div>
 
       <div class="seccion__head">
@@ -6313,6 +6408,93 @@
     if (!r.ok) throw new Error('Falta el archivo data/base.json en el sitio.');
     aplicarBase(await decryptPayload(await r.json(), clave));
   }
+
+  // ============================================================
+  // EXPORTAR PDF: imprime la sección visible (el usuario elige "Guardar como PDF")
+  // ============================================================
+  const PDF_SECCIONES = {
+    'screen-evolucion': 'Evolución Categorías',
+    'screen-resumen':   'Resumen por Ciclo',
+    'screen-arbol':     'Árbol de Red',
+    'screen-zonas':     'Zonas',
+    'screen-dir':       'Resumen DIR',
+  };
+  // Lo que se está mirando: persona, región o indicador, según la sección
+  function contextoPdf(screenId) {
+    if (screenId === 'screen-evolucion') return estado.seleccionada ? `${estado.seleccionada.nombre} · ${etiquetaPeriodo(estado.periodo)}` : '';
+    if (screenId === 'screen-resumen')   return estado2.seleccionada ? estado2.seleccionada.nombre : '';
+    if (screenId === 'screen-arbol')     return estado4.seleccionada ? estado4.seleccionada.nombre : '';
+    if (screenId === 'screen-zonas') {
+      const partes = [];
+      if (estado3.seleccionada) partes.push(`Red de ${estado3.seleccionada.nombre}`);
+      if (estado3.regionIdx !== null && REGIONES[estado3.regionIdx]) partes.push(REGIONES[estado3.regionIdx].nombre);
+      return partes.join(' · ') || 'Nivel País';
+    }
+    if (screenId === 'screen-dir') return DIR_INDICADORES[estado5.indicador].label;
+    return '';
+  }
+
+  const pdfRestaurar = [];
+  function exportarPDF(screen) {
+    prepararPdf(screen);
+    window.print();
+  }
+  function prepararPdf(screen) {
+    const titulo = PDF_SECCIONES[screen.id] || 'Portal Coordinadoras';
+    const contexto = contextoPdf(screen.id);
+    const cicloId = ultimoCicloCargado();
+    const ciclo = cicloId ? `Ciclo ${ciclosMeta[cicloId].ciclo}` : '';
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-CL');
+    const hora = ahora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    // Tablas más anchas que una hoja A4 horizontal (≈ 1040 px útiles): se achican para caber
+    const ANCHO_HOJA = 1040;
+    screen.querySelectorAll('.tabla-wrap > table').forEach(el => {
+      const ancho = el.scrollWidth;
+      if (ancho > ANCHO_HOJA) {
+        const previo = el.style.zoom;
+        el.style.zoom = (ANCHO_HOJA / ancho).toFixed(3);
+        pdfRestaurar.push(() => { el.style.zoom = previo; });
+      }
+    });
+
+    // Árbol más ancho que una hoja: en vez de achicarlo hasta que no se lea, la página del
+    // PDF toma el tamaño del árbol completo (el PDF es vectorial y se puede acercar).
+    const arbol = screen.querySelector('.org > ul');
+    if (arbol && arbol.scrollWidth > ANCHO_HOJA) {
+      const MAX_PX = 18000;  // límite práctico de tamaño de página en PDF
+      const anchoArbol = arbol.scrollWidth + 40;
+      if (anchoArbol > MAX_PX) {
+        const previo = arbol.style.zoom;
+        arbol.style.zoom = (MAX_PX / anchoArbol).toFixed(3);
+        pdfRestaurar.push(() => { arbol.style.zoom = previo; });
+      }
+      const ancho = Math.min(anchoArbol, MAX_PX) + 80;
+      const alto = Math.max(794, screen.querySelector('.seccion').scrollHeight + 120);
+      const pagina = document.createElement('style');
+      pagina.textContent = `@media print { @page { size: ${ancho}px ${alto}px; margin: 10mm; } .seccion { max-width: none !important; } }`;
+      document.head.appendChild(pagina);
+      pdfRestaurar.push(() => pagina.remove());
+    }
+
+    // Pie con origen, fecha y aviso de datos personales
+    const pie = document.createElement('div');
+    pie.className = 'pdf-pie';
+    pie.textContent = `Biogreen Chile · Portal Coordinadoras · ${[titulo, contexto, ciclo].filter(Boolean).join(' · ')} · ` +
+      `Generado el ${fecha} a las ${hora}. Documento interno con datos personales (Ley 19.628): no compartir fuera de Biogreen.`;
+    screen.querySelector('.seccion').appendChild(pie);
+    pdfRestaurar.push(() => pie.remove());
+
+    // El título de la página es el nombre que el navegador propone para el PDF
+    const tituloPrevio = document.title;
+    document.title = ['Biogreen', titulo, contexto, ciclo, fecha.replaceAll('/', '-')].filter(Boolean).join(' - ');
+    pdfRestaurar.push(() => { document.title = tituloPrevio; });
+  }
+  window.addEventListener('afterprint', () => { while (pdfRestaurar.length) pdfRestaurar.pop()(); });
+  document.querySelectorAll('.btn-pdf').forEach(btn => {
+    btn.addEventListener('click', () => exportarPDF(btn.closest('.screen')));
+  });
 </script>
 </body>
 </html>
