@@ -2043,7 +2043,7 @@
   }
   .filtros.filtros--arbol { grid-template-columns: 1fr; }
   @media (min-width: 640px) {
-    .filtros.filtros--arbol { grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); }
+    .filtros.filtros--arbol { grid-template-columns: minmax(0, 1fr) minmax(150px, 200px) minmax(120px, 160px); }
   }
   .arbol-select {
     width: 100%;
@@ -2687,6 +2687,10 @@
               </svg>
             </button>
           </div>
+        </div>
+        <div class="campo">
+          <label class="campo__label" for="arbol-periodo">Periodo</label>
+          <select id="arbol-periodo" class="arbol-select"></select>
         </div>
         <div class="campo">
           <label class="campo__label" for="arbol-ciclo">Ciclo</label>
@@ -5887,21 +5891,30 @@
   function cicloArbol() {
     return (estado4.cicloId && ciclosMeta[estado4.cicloId]) ? estado4.cicloId : ultimoCicloCargado();
   }
-  const selectCicloArbol = document.getElementById('arbol-ciclo');
+  const selectPeriodoArbol = document.getElementById('arbol-periodo');
+  const selectCicloArbol   = document.getElementById('arbol-ciclo');
+  // Ciclos cargados de un periodo, del más reciente al más antiguo
+  const ciclosDelPeriodo = periodo => Object.keys(ciclosMeta)
+    .filter(id => ciclosMeta[id].periodo === periodo)
+    .sort((a, b) => (ciclosMeta[b].ciclo || 0) - (ciclosMeta[a].ciclo || 0));
   function llenarSelectorCiclos() {
-    const ids = Object.keys(ciclosMeta).sort((a, b) => {
-      const pa = String(ciclosMeta[a].periodo), pb = String(ciclosMeta[b].periodo);
-      return pa !== pb ? pb.localeCompare(pa) : (ciclosMeta[b].ciclo || 0) - (ciclosMeta[a].ciclo || 0);
-    });
     const actual = cicloArbol();
-    selectCicloArbol.innerHTML = ids.map(id =>
-      `<option value="${escapa(id)}"${id === actual ? ' selected' : ''}>C${escapa(String(ciclosMeta[id].ciclo))} · ${escapa(etiquetaPeriodo(ciclosMeta[id].periodo || ''))}${id === ids[0] ? ' (último)' : ''}</option>`
-    ).join('');
+    const periodoActual = actual ? ciclosMeta[actual].periodo : null;
+    const periodos = [...new Set(Object.values(ciclosMeta).map(m => m.periodo))].sort((a, b) => String(b).localeCompare(String(a)));
+    selectPeriodoArbol.innerHTML = periodos.map(p =>
+      `<option value="${escapa(p)}"${p === periodoActual ? ' selected' : ''}>${escapa(etiquetaPeriodo(p))}</option>`).join('');
+    const ultimo = ultimoCicloCargado();
+    selectCicloArbol.innerHTML = ciclosDelPeriodo(periodoActual).map(id =>
+      `<option value="${escapa(id)}"${id === actual ? ' selected' : ''}>C${escapa(String(ciclosMeta[id].ciclo))}${id === ultimo ? ' (último)' : ''}</option>`).join('');
   }
-  selectCicloArbol.addEventListener('change', () => {
-    estado4.cicloId = selectCicloArbol.value;
+  function cambiarCicloArbol(id) {
+    estado4.cicloId = id;
+    llenarSelectorCiclos();
     if (estado4.seleccionada) renderArbolDetalle(estado4.seleccionada).catch(console.error);
-  });
+  }
+  // Al cambiar el periodo se elige su ciclo más reciente
+  selectPeriodoArbol.addEventListener('change', () => cambiarCicloArbol(ciclosDelPeriodo(selectPeriodoArbol.value)[0] || null));
+  selectCicloArbol.addEventListener('change', () => cambiarCicloArbol(selectCicloArbol.value));
 
   const filtroPersona4  = document.getElementById('filtro-persona-4');
   const filtroLimpiar4  = document.getElementById('filtro-persona-clear-4');
