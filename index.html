@@ -2032,6 +2032,30 @@
     margin-bottom: 8px;
   }
   .org-controles__btns { display: flex; gap: 6px; }
+  .arbol-aviso {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border: 1px solid #E8C77A;
+    border-radius: 10px;
+    background: #FFF7E3;
+    color: #6B4E0E;
+    font-size: 12.5px;
+  }
+  .filtros.filtros--arbol { grid-template-columns: 1fr; }
+  @media (min-width: 640px) {
+    .filtros.filtros--arbol { grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); }
+  }
+  .arbol-select {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    font: inherit;
+    font-weight: 700;
+    color: var(--tinta);
+    background: var(--superficie);
+    border: 1px solid var(--linea);
+    border-radius: 12px;
+  }
 
   /* Colores por categoría de liderazgo */
   .arbol-cat-LID   { background: var(--cat-LID); color: #2B2A22; }
@@ -2637,7 +2661,7 @@
         </div>
       </div>
 
-      <div class="filtros" role="search" aria-label="Filtros de búsqueda" style="grid-template-columns: 1fr;">
+      <div class="filtros filtros--arbol" role="search" aria-label="Filtros de búsqueda">
         <div class="campo">
           <label class="campo__label" for="filtro-persona-4">Nombre o código Bionet</label>
           <div class="buscador">
@@ -2663,6 +2687,10 @@
               </svg>
             </button>
           </div>
+        </div>
+        <div class="campo">
+          <label class="campo__label" for="arbol-ciclo">Ciclo</label>
+          <select id="arbol-ciclo" class="arbol-select"></select>
         </div>
       </div>
 
@@ -3263,6 +3291,8 @@
       // Resetear estado — cada visita empieza sin filtro
       estado4.seleccionada = null;
       estado4.texto        = '';
+      estado4.cicloId      = null;
+      llenarSelectorCiclos();
       const fi4 = document.getElementById('filtro-persona-4');
       const fc4 = document.getElementById('filtro-persona-clear-4');
       if (fi4) fi4.value = '';
@@ -5140,6 +5170,8 @@
         cntDir[cod] || 0,
         // [14] Categoría de "base de usuarios" (define la regla de activos en Zonas)
         basePorCod[cod] ? basePorCod[cod].categoria : null,
+        // [15] categoria_actual de "resumen" (inicio del ciclo; define las flechas del Árbol)
+        r.categoria_actual || null,
       ];
       if (basePorCod[cod]) personasInfo[cod] = { nombre: basePorCod[cod].nombre };
     }
@@ -5206,6 +5238,18 @@
     };
     for (const cod of Object.keys(cp.metricas)) {
       cicloData.personas[String(cod)] = cp.metricas[cod];
+    }
+    // Estructura de la red de este ciclo (Árbol de Red por ciclo): uplines de todas,
+    // nombres solo de las líderes (las únicas que aparecen en el árbol).
+    if (cp.estructura) {
+      const LIDERES = new Set(['LID', 'COR', 'DT', 'DR', 'DS', 'DD', 'DE', 'DN']);
+      cicloData.liderazgo = cp.estructura.liderazgo;
+      cicloData.nombres = {};
+      for (const [codStr, nombre] of Object.entries(cp.estructura.nombres)) {
+        const met = cp.metricas[codStr] || cp.metricas[Number(codStr)];
+        const catInicio = CATEGORIAS[cp.estructura.liderazgo[codStr][0]];
+        if (LIDERES.has(catInicio) || (met && (LIDERES.has(met[0]) || LIDERES.has(met[15])))) cicloData.nombres[codStr] = nombre;
+      }
     }
 
     setDetail('cifrando datos del ciclo…');
@@ -5836,7 +5880,28 @@
   const estado4 = {
     texto: '',
     seleccionada: null, // {codigo, nombre}
+    cicloId: null,      // ciclo elegido en el selector; null = último cargado
   };
+
+  // Ciclo con el que se dibuja el árbol
+  function cicloArbol() {
+    return (estado4.cicloId && ciclosMeta[estado4.cicloId]) ? estado4.cicloId : ultimoCicloCargado();
+  }
+  const selectCicloArbol = document.getElementById('arbol-ciclo');
+  function llenarSelectorCiclos() {
+    const ids = Object.keys(ciclosMeta).sort((a, b) => {
+      const pa = String(ciclosMeta[a].periodo), pb = String(ciclosMeta[b].periodo);
+      return pa !== pb ? pb.localeCompare(pa) : (ciclosMeta[b].ciclo || 0) - (ciclosMeta[a].ciclo || 0);
+    });
+    const actual = cicloArbol();
+    selectCicloArbol.innerHTML = ids.map(id =>
+      `<option value="${escapa(id)}"${id === actual ? ' selected' : ''}>C${escapa(String(ciclosMeta[id].ciclo))} · ${escapa(etiquetaPeriodo(ciclosMeta[id].periodo || ''))}${id === ids[0] ? ' (último)' : ''}</option>`
+    ).join('');
+  }
+  selectCicloArbol.addEventListener('change', () => {
+    estado4.cicloId = selectCicloArbol.value;
+    if (estado4.seleccionada) renderArbolDetalle(estado4.seleccionada).catch(console.error);
+  });
 
   const filtroPersona4  = document.getElementById('filtro-persona-4');
   const filtroLimpiar4  = document.getElementById('filtro-persona-clear-4');
@@ -5862,16 +5927,27 @@
   }
   function nombreDe(cod) {
     const p = PERSONAS.find(pp => pp.codigo === cod);
-    return p ? p.nombre : String(cod);
+    if (p) return p.nombre;
+    return ARBOL_NOMBRES[String(cod)] || String(cod);
   }
+
+  // Estructura con la que se dibuja el árbol: la del ciclo elegido (guardada al cargarlo)
+  // o, si ese ciclo no la tiene, la base actual. Formato: {cod: [cat_idx, up1, up2, ...]}
+  let ARBOL_LID = null;
+  let ARBOL_NOMBRES = {};
+  const arbolLid = () => ARBOL_LID || LIDERAZGO_RAW;
+  function arbolUps(cod) { const a = arbolLid()[String(cod)]; return a ? a.slice(1) : []; }
+  function arbolCat(cod) { const a = arbolLid()[String(cod)]; return a ? a[0] : -1; }
+  function arbolEsLider(cod) { return CAT_IDX_LIDERES.has(arbolCat(cod)); }
 
   // Construye el árbol de líderes bajo `root`.
   // Devuelve {nodes: [{cod, cat, hijos:[cod...]}, ...], rootCods: [cod...] (hijos directos del root)}
-  // Categoría de inicio (categoria_actual = base de usuarios, met[14]) y de cierre
-  // (categoria_nueva, met[0]) de una persona en el último ciclo cargado.
+  // Categoría de inicio (categoria_actual de "resumen", met[15]) y de cierre (categoria_nueva, met[0]).
+  // Ciclos cargados antes de guardar met[15] usan la de "base de usuarios" (met[14]), que en C15
+  // y C16 coincide con categoria_actual; en otros ciclos no, por eso conviene recargarlos.
   function categoriasCiclo(cod, personasData) {
     const met = personasData ? personasData[String(cod)] : null;
-    return { actual: (met && met[14]) || null, nueva: (met && met[0]) || null };
+    return { actual: (met && (met[15] || met[14])) || null, nueva: (met && met[0]) || null };
   }
   const CATS_BAJO_DIR = new Set(['DBR', 'DBR+', 'LID', 'COR']);
   // 'sube' si cruza a Directora en el ciclo, 'baja' si deja de serlo, null si no cruza
@@ -5883,21 +5959,25 @@
   }
   // Categoría que se muestra: la del cierre del último ciclo; si no está, la de la base embebida
   function categoriaMostrada(cod, personasData) {
-    return categoriasCiclo(cod, personasData).nueva || catNombre(catDe(cod));
+    return categoriasCiclo(cod, personasData).nueva || catNombre(arbolCat(cod));
   }
 
-  // Hijas directas de cada persona (por su patrocinadora directa = primer upline).
-  // Se arma una sola vez: sirve para recorrer la red completa sin límite de niveles.
-  let HIJAS_DIRECTAS = null;
+  // Hijas directas de cada persona (por su patrocinadora directa = primer upline), por estructura.
+  // Se arma una vez por estructura: sirve para recorrer la red completa sin límite de niveles.
+  let HIJAS_DIRECTAS = null;  // se reinicia al cambiar la base (vaciarBase)
+  const HIJAS_POR_FUENTE = new WeakMap();
   function hijasDirectas() {
-    if (HIJAS_DIRECTAS) return HIJAS_DIRECTAS;
-    HIJAS_DIRECTAS = {};
-    for (const codStr of Object.keys(LIDERAZGO_RAW)) {
-      const madre = uplinesDe(Number(codStr))[0];
+    const fuente = arbolLid();
+    if (fuente === LIDERAZGO_RAW && HIJAS_DIRECTAS) return HIJAS_DIRECTAS;
+    if (fuente !== LIDERAZGO_RAW && HIJAS_POR_FUENTE.has(fuente)) return HIJAS_POR_FUENTE.get(fuente);
+    const hijas = {};
+    for (const codStr of Object.keys(fuente)) {
+      const madre = arbolUps(Number(codStr))[0];
       if (madre === undefined || String(madre) === codStr) continue;
-      (HIJAS_DIRECTAS[madre] = HIJAS_DIRECTAS[madre] || []).push(Number(codStr));
+      (hijas[madre] = hijas[madre] || []).push(Number(codStr));
     }
-    return HIJAS_DIRECTAS;
+    if (fuente === LIDERAZGO_RAW) HIJAS_DIRECTAS = hijas; else HIJAS_POR_FUENTE.set(fuente, hijas);
+    return hijas;
   }
   // Toda la red bajo una persona, incluidas las Directoras que desarrolló y sus equipos.
   // (A diferencia de Zonas, aquí NO se corta en la primera Directora.)
@@ -5924,7 +6004,7 @@
     const LIDERES_TXT = new Set(['LID', 'COR', 'DT', 'DR', 'DS', 'DD', 'DE', 'DN']);
     const esLiderAhora = cod => {
       const { actual, nueva } = categoriasCiclo(cod, personasData);
-      return esLider(cod) || LIDERES_TXT.has(actual) || LIDERES_TXT.has(nueva);
+      return arbolEsLider(cod) || LIDERES_TXT.has(actual) || LIDERES_TXT.has(nueva);
     };
     const lideres = downlineArr.filter(esLiderAhora);
     const rootEsLider = esLiderAhora(rootCod);
@@ -5934,12 +6014,12 @@
     lideres.forEach(cod => {
       // Subir de patrocinadora en patrocinadora hasta la primera líder (o la raíz)
       let parent = rootCod;
-      let u = uplinesDe(cod)[0];
+      let u = arbolUps(cod)[0];
       const visitados = new Set([cod]);
       while (u !== undefined && u !== rootCod && downlineSet.has(u) && !visitados.has(u)) {
         if (esLiderAhora(u)) { parent = u; break; }
         visitados.add(u);
-        u = uplinesDe(u)[0];
+        u = arbolUps(u)[0];
       }
       padre[cod] = parent;
     });
@@ -6077,7 +6157,7 @@
     const met    = personasData ? personasData[String(cod)] : null;
     const ptsDir = met ? (met[1] || 0) : null;
     const hijos  = hijosMap[cod] || [];
-    const upline = uplinesDe(cod)[0];
+    const upline = arbolUps(cod)[0];
     const etiqueta = esRoot || catTxt === '—' ? nombreCorto(nombre) : `${nombreCorto(nombre)} - ${catTxt}`;
     const cambio = cambioDirectora(cod, personasData);
     const { actual } = categoriasCiclo(cod, personasData);
@@ -6109,7 +6189,7 @@
 
   async function renderArbolDetalle(persona) {
     arbolResultados.dataset.vista = 'detalle';
-    const cicloId  = ultimoCicloCargado();
+    const cicloId  = cicloArbol();
     const cicloTag = cicloId ? `Ciclo ${ciclosMeta[cicloId]?.ciclo ?? '?'} · ${etiquetaPeriodo(ciclosMeta[cicloId]?.periodo || '—')}` : 'Sin ciclos cargados';
 
     // Render inicial con la cabecera y un "cargando"
@@ -6145,20 +6225,24 @@
       setTimeout(() => filtroPersona4 && filtroPersona4.focus(), 60);
     });
 
-    // Cargar datos del ciclo
-    const personasData = await datosDelUltimoCiclo();
-    if (estado4.seleccionada !== persona) return;
+    // Cargar datos y estructura del ciclo elegido
+    const datosCiclo = cicloId ? await fetchCicloData(cicloId) : null;
+    if (estado4.seleccionada !== persona || cicloArbol() !== cicloId) return;
+    const personasData = datosCiclo ? datosCiclo.personas : null;
+    ARBOL_LID = (datosCiclo && datosCiclo.liderazgo) || null;
+    ARBOL_NOMBRES = (datosCiclo && datosCiclo.nombres) || {};
+    const sinEstructura = !ARBOL_LID && cicloId !== ultimoCicloCargado();
 
     // Actualizar cabecera con categoría + pts del ciclo
     const metRoot = personasData ? personasData[String(persona.codigo)] : null;
     const catSlot = document.getElementById('arbol-cat-slot');
     const ptsSlot = document.getElementById('arbol-pts-slot');
     if (metRoot) {
-      const catTxt = metRoot[0] || catNombre(catDe(persona.codigo));
+      const catTxt = metRoot[0] || catNombre(arbolCat(persona.codigo));
       if (catSlot) catSlot.innerHTML = `<span class="arbol-cat arbol-cat-${escapa(catTxt)}">${escapa(catTxt)}</span>`;
       if (ptsSlot) ptsSlot.innerHTML = `Puntos directos <strong>${nf.format(metRoot[1] || 0)}</strong>`;
     } else {
-      const catTxt = catNombre(catDe(persona.codigo));
+      const catTxt = catNombre(arbolCat(persona.codigo));
       if (catSlot) catSlot.innerHTML = catTxt !== '—' ? `<span class="arbol-cat arbol-cat-${escapa(catTxt)}">${escapa(catTxt)}</span>` : 'Categoría <strong>sin datos</strong>';
       if (ptsSlot) ptsSlot.innerHTML = 'Puntos directos <strong>sin datos</strong>';
     }
@@ -6199,6 +6283,7 @@
         <span class="arbol-resumen__item"><strong>${nf.format(totalLideres)}</strong> líderes en la red${rootEsLider ? '' : ' (raíz no es líder)'}</span>
         ${resumenHtml}
       </div>
+      ${sinEstructura ? `<p class="arbol-aviso">La estructura de la red de este ciclo no está guardada todavía: se muestra la estructura de la base actual con las categorías y puntos de C${escapa(String(ciclosMeta[cicloId].ciclo))}. Vuelve a cargar el Excel de este ciclo para ver su estructura real.</p>` : ''}
       <div class="org-controles">
         <p class="org-ayuda">Haz clic en una persona para ocultar o mostrar su rama. Desliza hacia el lado si la red es ancha.</p>
         <div class="org-controles__btns">
@@ -6442,7 +6527,7 @@
   function prepararPdf(screen) {
     const titulo = PDF_SECCIONES[screen.id] || 'Portal Coordinadoras';
     const contexto = contextoPdf(screen.id);
-    const cicloId = ultimoCicloCargado();
+    const cicloId = screen.id === 'screen-arbol' ? cicloArbol() : ultimoCicloCargado();
     const ciclo = cicloId ? `Ciclo ${ciclosMeta[cicloId].ciclo}` : '';
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-CL');
